@@ -1,7 +1,7 @@
 -module(rabbit_mochiweb).
 
 -export([start/0, stop/0]).
--export([register_handler/4, register_global_handler/1]).
+-export([register_global_handler/1]).
 -export([register_context_handler/3, register_static_context/4]).
 -export([static_context_selector/1, static_context_handler/3, static_context_handler/2]).
 
@@ -44,13 +44,13 @@ register_global_handler(Handler) ->
 %% @doc Registers a dynamic handler under a fixed context path, with
 %% link to display in the global context.
 register_context_handler(Context, Handler, LinkDesc) ->
-    rabbit_mochiweb_registry:add(
+    register_handler(
       fun(Req) ->
               "/" ++ Path = Req:get(raw_path),
               (Path == Context) or (string:str(Path, Context ++ "/") == 1)
       end,
       Handler,
-      {Context, LinkDesc}).
+      Context, LinkDesc).
 
 %% @doc Convenience function registering a fully static context to
 %% serve content from a module-relative directory, with
