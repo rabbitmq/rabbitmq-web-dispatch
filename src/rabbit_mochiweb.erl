@@ -1,7 +1,7 @@
 -module(rabbit_mochiweb).
 
 -export([start/0, stop/0]).
--export([register_global_handler/1]).
+-export([register_handler/4, register_global_handler/1]).
 -export([register_context_handler/3, register_static_context/4]).
 -export([static_context_selector/1, static_context_handler/3, static_context_handler/2]).
 
