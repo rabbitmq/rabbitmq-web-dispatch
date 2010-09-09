@@ -1,9 +1,10 @@
 UPSTREAM_GIT=http://github.com/mochi/mochiweb.git
+# You need to update the website when you change the revision.
 REVISION=9a53dbd7b2c52eb5b9d4
 
 EBIN_DIR=ebin
 
-LIB_PACKAGE=mochiweb
+LIB_PACKAGE=mochiweb-$(REVISION)
 LIB_PACKAGE_DIR=$(LIB_PACKAGE)
 LIB_PACKAGE_NAME=$(LIB_PACKAGE).ez
 
