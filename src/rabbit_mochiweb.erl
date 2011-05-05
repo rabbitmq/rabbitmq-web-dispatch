@@ -57,26 +57,39 @@ static_context_selector(Context) ->
 %% up static content from a directory specified relative to the
 %% directory containing the ebin directory containing the named
 %% module's beam file.
-static_context_handler(Context, Module, FSPath) ->
+static_context_handler(Context, Module, FSPath) when is_atom(Module) ->
+    static_context_handler(Context, [Module], FSPath);
+
+static_context_handler(Context, Modules, FSPath) ->
+    static_context_handler(
+      Context, [filename:join(module_path(M), FSPath) || M <- Modules]).
+
+module_path(Module) ->
     {file, Here} = code:is_loaded(Module),
-    ModuleRoot = filename:dirname(filename:dirname(Here)),
-    LocalPath = filename:join(ModuleRoot, FSPath),
-    static_context_handler(Context, LocalPath).
+    filename:dirname(filename:dirname(Here)).
 
 %% @doc Produces a handler for use with register_handler that serves
 %% up static content from a specified directory.
-static_context_handler("", LocalPath) ->
+static_context_handler("", LocalPaths) ->
     fun(Req) ->
             "/" ++ Path = Req:get(raw_path),
-            Req:serve_file(Path, LocalPath)
+            serve_file(Req, Path, LocalPaths)
     end;
-static_context_handler(Context, LocalPath) ->
+static_context_handler(Context, LocalPaths) ->
     fun(Req) ->
             "/" ++ Path = Req:get(raw_path),
             case string:substr(Path, length(Context) + 1) of
                 ""        -> Req:respond({301, [{"Location", "/" ++ Context ++ "/"}], ""});
-                "/" ++ P  -> Req:serve_file(P, LocalPath)
+                "/" ++ P  -> serve_file(Req, P, LocalPaths)
             end
+    end.
+
+serve_file(Req, Path, [LocalPath]) ->
+    Req:serve_file(Path, LocalPath);
+serve_file(Req, Path, [LocalPath | Others]) ->
+    case filelib:is_file(filename:join([LocalPath, Path])) of
+        true  -> Req:serve_file(Path, LocalPath);
+        false -> serve_file(Req, Path, [Others])
     end.
 
 %% @doc Register a fully static but HTTP-authenticated context to
