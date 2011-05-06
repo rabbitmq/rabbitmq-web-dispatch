@@ -87,7 +87,11 @@ static_context_handler(Context, LocalPaths) ->
 serve_file(Req, Path, [LocalPath]) ->
     Req:serve_file(Path, LocalPath);
 serve_file(Req, Path, [LocalPath | Others]) ->
-    case filelib:is_file(filename:join([LocalPath, Path])) of
+    Path1 = case Path of
+                "" -> "index.html";
+                _  -> Path
+            end,
+    case filelib:is_regular(filename:join([LocalPath, Path1])) of
         true  -> Req:serve_file(Path, LocalPath);
         false -> serve_file(Req, Path, [Others])
     end.
