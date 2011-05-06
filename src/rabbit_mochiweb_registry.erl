@@ -27,9 +27,7 @@ init([]) ->
     {ok, #state{selectors = [], fallback = fun listing_fallback_handler/1}}.
 
 handle_call({add, Selector, Handler, Link}, _From,
-            State = #state{selectors = Selectors0}) ->
-    Selectors = [T || T = {S, _, _} <- Selectors0,
-                      S =/= Selector],
+            State = #state{selectors = Selectors}) ->
     UpdatedState =
         State#state{selectors = Selectors ++ [{Selector, Handler, Link}]},
     {reply, ok, UpdatedState};
