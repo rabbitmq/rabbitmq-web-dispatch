@@ -2,21 +2,23 @@
 
 -behaviour(supervisor).
 
+-define(SUP, ?MODULE).
+
 %% External exports
--export([start_link/0, upgrade/0]).
+-export([start_link/1, upgrade/1, ensure_listener/1]).
 
 %% supervisor callbacks
 -export([init/1]).
 
 %% @spec start_link() -> ServerRet
 %% @doc API for starting the supervisor.
-start_link() ->
-    supervisor:start_link({local, ?MODULE}, ?MODULE, []).
+start_link(ListenerSpecs) ->
+    supervisor:start_link({local, ?SUP}, ?MODULE, [ListenerSpecs]).
 
-%% @spec upgrade() -> ok
+%% @spec upgrade([instance()]) -> ok
 %% @doc Add processes if necessary.
-upgrade() ->
-    {ok, {_, Specs}} = init([]),
+upgrade(ListenerSpecs) ->
+    {ok, {_, Specs}} = init([ListenerSpecs]),
 
     Old = sets:from_list(
             [Name || {Name, _, _, _} <- supervisor:which_children(?MODULE)]),
@@ -24,23 +26,27 @@ upgrade() ->
     Kill = sets:subtract(Old, New),
 
     sets:fold(fun (Id, ok) ->
-                      supervisor:terminate_child(?MODULE, Id),
-                      supervisor:delete_child(?MODULE, Id),
+                      supervisor:terminate_child(?SUP, Id),
+                      supervisor:delete_child(?SUP, Id),
                       ok
               end, ok, Kill),
 
-    [supervisor:start_child(?MODULE, Spec) || Spec <- Specs],
+    [supervisor:start_child(?SUP, Spec) || Spec <- Specs],
     ok.
 
-%% @spec init([]) -> SupervisorTree
-%% @doc supervisor callback.
-init([]) ->
-    Registry = {rabbit_mochiweb_registry,
-                {rabbit_mochiweb_registry, start_link, []},
-                permanent, 5000, worker, dynamic},
-    Web = {rabbit_mochiweb_web,
-           {rabbit_mochiweb_web, start, []},
-           permanent, 5000, worker, dynamic},
+ensure_listener({Listener, Spec}) ->
+    Child = {{rabbit_mochiweb_web, Listener},
+             {rabbit_mochiweb_web, start, [{Listener, Spec}]},
+             permanent, 5000, worker, dynamic},
+    case supervisor:start_child(?SUP, Child) of
+        {ok,                      Pid}  -> {ok, Pid};
+        {error, {already_started, Pid}} -> {ok, Pid}
+    end.
 
-    Processes = [Registry, Web],
-    {ok, {{one_for_one, 10, 10}, Processes}}.
+%% @spec init([[instance()]]) -> SupervisorTree
+%% @doc supervisor callback.
+init([ListenerSpecs]) ->
+    Registry = {rabbit_mochiweb_registry,
+                {rabbit_mochiweb_registry, start_link, [ListenerSpecs]},
+                permanent, 5000, worker, dynamic},
+    {ok, {{one_for_one, 10, 10}, [Registry]}}.
