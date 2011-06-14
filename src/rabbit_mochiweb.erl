@@ -120,7 +120,7 @@ serve_file(Req, Path, [LocalPath | Others]) ->
             end,
     case filelib:is_regular(filename:join([LocalPath, Path1])) of
         true  -> Req:serve_file(Path, LocalPath);
-        false -> serve_file(Req, Path, [Others])
+        false -> serve_file(Req, Path, Others)
     end.
 
 %% Register a fully static but HTTP-authenticated context to
