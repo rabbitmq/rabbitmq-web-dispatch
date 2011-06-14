@@ -84,26 +84,43 @@ static_context_selector(Prefix) ->
 %% up static content from a directory specified relative to the
 %% directory containing the ebin directory containing the named
 %% module's beam file.
-static_context_handler(Prefix, Module, FSPath) ->
+static_context_handler(Prefix, Module, FSPath) when is_atom(Module) ->
+    static_context_handler(Prefix, [Module], FSPath);
+
+static_context_handler(Prefix, Modules, FSPath) ->
+    static_context_handler(
+      Prefix, [filename:join(module_path(M), FSPath) || M <- Modules]).
+
+module_path(Module) ->
     {file, Here} = code:is_loaded(Module),
-    ModuleRoot = filename:dirname(filename:dirname(Here)),
-    LocalPath = filename:join(ModuleRoot, FSPath),
-    static_context_handler(Prefix, LocalPath).
+    filename:dirname(filename:dirname(Here)).
 
 %% @doc Produces a handler for use with register_handler that serves
 %% up static content from a specified directory.
-static_context_handler("", LocalPath) ->
+static_context_handler("", LocalPaths) ->
     fun(Req) ->
             "/" ++ Path = Req:get(raw_path),
-            Req:serve_file(Path, LocalPath)
+            serve_file(Req, Path, LocalPaths)
     end;
-static_context_handler(Prefix, LocalPath) ->
+static_context_handler(Prefix, LocalPaths) ->
     fun(Req) ->
             "/" ++ Path = Req:get(raw_path),
             case string:substr(Path, length(Prefix) + 1) of
                 ""        -> Req:respond({301, [{"Location", "/" ++ Prefix ++ "/"}], ""});
-                "/" ++ P  -> Req:serve_file(P, LocalPath)
+                "/" ++ P  -> serve_file(Req, P, LocalPaths)
             end
+    end.
+
+serve_file(Req, Path, [LocalPath]) ->
+    Req:serve_file(Path, LocalPath);
+serve_file(Req, Path, [LocalPath | Others]) ->
+    Path1 = case Path of
+                "" -> "index.html";
+                _  -> Path
+            end,
+    case filelib:is_regular(filename:join([LocalPath, Path1])) of
+        true  -> Req:serve_file(Path, LocalPath);
+        false -> serve_file(Req, Path, [Others])
     end.
 
 %% Register a fully static but HTTP-authenticated context to
