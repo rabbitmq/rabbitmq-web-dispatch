@@ -1,5 +1,12 @@
 # RabbitMQ Web Dispatch
 
+## This was migrated to https://github.com/rabbitmq/rabbitmq-server
+
+This repository has been moved to the main unified RabbitMQ "monorepo", including all open issues. You can find the source under [/deps/rabbitmq_web_dispatch](https://github.com/rabbitmq/rabbitmq-server/tree/master/deps/rabbitmq_web_dispatch).
+All issues have been transferred.
+
+## Introduction
+
 rabbitmq-web-dispatch is a thin veneer around Cowboy that provides the
 ability for multiple applications to co-exist on Cowboy
 listeners. Applications can register static document roots or dynamic
